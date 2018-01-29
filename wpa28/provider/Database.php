@@ -18,6 +18,7 @@ class DB extends PDO {
     private $table_name;
     private $sql;
     private $select_status;
+    private $where;
 
     public function __construct() {
         // echo "DB Construct! <br>";
@@ -28,13 +29,11 @@ class DB extends PDO {
         $this->pass = Config::get('database.pass');
         // mysql:dbname=wpa28db;host=localhost
         $dns = $this->engine . ':dbname=' . $this->database . ";host=" . $this->host;
-        // var_dump($dns);
         try {
             $conn = parent::__construct( $dns, $this->user, $this->pass );
         } catch (PDOException $e) {
             echo "Something wrong. Database connection failed.";
         }
-
     }
 
     public static function table($table_name)
@@ -46,50 +45,50 @@ class DB extends PDO {
         self::$_instance->table_name = $table_name;
         self::$_instance->select_status = false;
         self::$_instance->sql = '';
+        self::$_instance->where = '';
 
         return self::$_instance;
     }
 
-    // Select / Get
-    public function getAll() {
-        $sql = "SELECT * FROM " . $this->table_name . $this->where;
-        $this->where = "";
-        // var_dump($sql);
-        try {
+    // Select
+    public function select(string ...$col) {
+        $this->select_status = true;
+        $columns = implode(", ", $col);
+        // var_dump($columns);die();
+        $this->sql = "SELECT " . $columns . " FROM " . $this->table_name;
 
-            $prep = $this->prepare($sql);
+        return $this;
+    }
 
-            if ($prep) {
-                $state = $prep->execute();
-            }
-
-            if ($state) {
-                $result = $prep->fetchAll(PDO::FETCH_ASSOC);
-            }
-            else {
-                $error = $prep->errorInfo();
-                echo "Failed to perform the query with message : ". $error[2];
-            }
-
-        } catch (PDOException $e) {
-            echo "A database problem has occured : " . $e->getMessage();
+    // Where
+    public function where() {
+        $arg = func_get_args();
+        if (gettype(end($arg)) == "string") {
+            $val = "'" . end($arg) . "'";
+        } else {
+            $val = end($arg);
         }
+        array_pop($arg);
+        var_dump($arg);
+        $where_clause = implode(" ", $arg);
+        $this->sql .= " WHERE " . $where_clause . " $val";
+        return $this;
+    }
+
+    // Select All
+    public function get() {
+        if (!$this->select_status) {
+            $this->sql = "SELECT * FROM " . $this->table_name;
+        }
+        // var_dump($this->sql);die();
+        $prep = $this->prepare($this->sql);
+        var_dump($prep);
+        $prep->execute();
+        $result = $prep->fetchAll(PDO::FETCH_ASSOC);
 
         return $result;
     }
 
-    // Where
-    public function where($id, $value) {
-        $valuetype = gettype($value);
-        // $this->sql = "SELECT * FROM " . $this->table_name . " WHERE " . $id . " = ";
-        $this->where = " WHERE " . $id . " = ";
-        if($valuetype == "string") {
-            $this->where .= "'" . $value . "'";
-        } else {
-            $this->where .= $value;
-        }
-        return $this;
-    }
 
     // Delete
     public function delete() {
@@ -101,12 +100,6 @@ class DB extends PDO {
         if($result == true) {
             echo "Delete Successfully!";
         }
-    }
-
-
-    // Select by col-name
-    public function select(string ...$col) {
-        $this->sql_status = true;
     }
 
     // Insert

@@ -7,10 +7,12 @@ define("DD", realpath("../"));
 require DD . "/vendor/autoload.php";
 
 // Select
-$result = DB::table("students")->where('id', '<', 10)->get();
-var_dump($result);
-$results = DB::table("students")->select('name','address')->where('name', '=', 'Too Ba')->get();
-var_dump($results);
+// $result = DB::table("students")->where('id', '<', 10)->get();
+// var_dump($result);
+// $results = DB::table("students")->select('name','address')->where('name', '=', 'Too Ba')->get();
+// var_dump($results);
+DB::table("students")->where('id', '=', 10)->get();
+// DB::table("students")->select('name', 'address')->where('id', '<', 10)->get();
 
 // Delete
 // DB::table("students")->where("id", 19)->delete();
