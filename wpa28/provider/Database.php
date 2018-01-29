@@ -1,11 +1,11 @@
 <?php
-
+/**
+* Database Libary for wpa28
+* 1. Select by columns name;
+* 2. Select All;
+* 3.
+*/
 class DB extends PDO {
-
-    private static $_instance;
-
-    private $table_name;
-    private $where;
 
     private $engine;
     private $host;
@@ -13,13 +13,19 @@ class DB extends PDO {
     private $user;
     private $pass;
 
+    private static $_instance;
+
+    private $table_name;
+    private $sql;
+    private $select_status;
+
     public function __construct() {
-        echo "DB Construct! <br>";
-        $this->engine = 'mysql';
-        $this->host = 'localhost';
-        $this->database = 'wpa28db';
-        $this->user = 'root';
-        $this->pass = '1234';
+        // echo "DB Construct! <br>";
+        $this->engine = Config::get('database.engine');
+        $this->host = Config::get('database.host');
+        $this->database = Config::get('database.database');
+        $this->user = Config::get('database.user');
+        $this->pass = Config::get('database.pass');
         // mysql:dbname=wpa28db;host=localhost
         $dns = $this->engine . ':dbname=' . $this->database . ";host=" . $this->host;
         // var_dump($dns);
@@ -31,29 +37,44 @@ class DB extends PDO {
 
     }
 
-    public function __destruct() {
-        echo "<br> DB Destructed! <br>";
-    }
-
-    public static function table($table_name) {
-        if(!self::$_instance instanceof DB) {
+    public static function table($table_name)
+    {
+        if (!self::$_instance instanceof DB) {
             self::$_instance = new DB();
         }
+
         self::$_instance->table_name = $table_name;
+        self::$_instance->select_status = false;
+        self::$_instance->sql = '';
+
         return self::$_instance;
     }
 
     // Select / Get
-    public function get() {
+    public function getAll() {
         $sql = "SELECT * FROM " . $this->table_name . $this->where;
         $this->where = "";
         // var_dump($sql);
-        $prep = $this->prepare($sql);
-        $prep->execute();
-        $result = $prep->fetchAll(PDO::FETCH_ASSOC);
-        if($result == false) {
-            trigger_error("Table not found", E_USER_ERROR);
+        try {
+
+            $prep = $this->prepare($sql);
+
+            if ($prep) {
+                $state = $prep->execute();
+            }
+
+            if ($state) {
+                $result = $prep->fetchAll(PDO::FETCH_ASSOC);
+            }
+            else {
+                $error = $prep->errorInfo();
+                echo "Failed to perform the query with message : ". $error[2];
+            }
+
+        } catch (PDOException $e) {
+            echo "A database problem has occured : " . $e->getMessage();
         }
+
         return $result;
     }
 
@@ -80,6 +101,12 @@ class DB extends PDO {
         if($result == true) {
             echo "Delete Successfully!";
         }
+    }
+
+
+    // Select by col-name
+    public function select(string ...$col) {
+        $this->sql_status = true;
     }
 
     // Insert
@@ -125,6 +152,15 @@ class DB extends PDO {
         if($result == true) {
             echo "Updated Successfully <br>";
         }
+    }
+
+
+
+    /**
+    * Destructor
+    */
+    public function __destruct() {
+        echo "<br> DB Destructed! <br>";
     }
 }
 
